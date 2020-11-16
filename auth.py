@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-
+import json
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler
 from urllib import parse
@@ -20,7 +20,7 @@ class Encrypt:
 
     def get_my_private_key(self):
         if not self.MY_PRIVATE_KEY:
-            with open('keys/rootCA.key', 'rb') as pem_in:
+            with open('keys/auth/rootCA.key', 'rb') as pem_in:
                 self.MY_PRIVATE_KEY = load_pem_private_key(pem_in.read(), None, default_backend())
         return self.MY_PRIVATE_KEY
 
@@ -31,9 +31,9 @@ class Encrypt:
         }
         return True if ALLOWED.get(name) and ALLOWED[name] == password else False
 
-    def sign_public_key(self, public_key=None):
-        with open('keys/client/client.pub', 'rb') as pem_in:
-            to_sign_key = serialization.load_pem_public_key(pem_in.read(), backend=default_backend())
+    def sign_public_key(self, public_key):
+        # print(public_key)
+        to_sign_key = serialization.load_pem_public_key(public_key.encode('utf-8'), backend=default_backend())
 
         subject = issuer = x509.Name([
             x509.NameAttribute(NameOID.COUNTRY_NAME, u"IN"),
@@ -60,19 +60,21 @@ class Encrypt:
 
 class GetHandler(BaseHTTPRequestHandler):
 
-    def do_GET(self):
+    def do_POST(self):
         parsed_path = parse.urlparse(self.path)
         if parsed_path.path == '/verify':
-            query = parsed_path.query
-            params = parse.parse_qs(query)
-            if not params.get('name') or not params.get('password'):
+            data = self.rfile.read(int(self.headers['Content-Length']))
+            data = json.loads(data.decode("utf-8"))
+            # print(data)
+            if not data.get('name') or not data.get('password') or not data.get('public_key'):
                 self.send_error(400, "Bad Request {}".format(self.path))
                 return
             self.send_response(200)
             self.send_header('Content-Type',
                              'text/plain; charset=utf-8')
             self.end_headers()
-            self.wfile.write(Encrypt().get_signed_key("ritik", "must_not_be_revealed", "Some_key").encode('utf-8'))
+            self.wfile.write(
+                Encrypt().get_signed_key(data['name'], data['password'], data['public_key']).encode('utf-8'))
         else:
             self.send_error(404, "Path not found {}".format(self.path))
 
