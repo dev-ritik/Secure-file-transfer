@@ -39,7 +39,7 @@ class ConnectionHandler:
                 mgf=padding.MGF1(algorithm=hashes.SHA256()),
                 algorithm=hashes.SHA256(),
                 label=None))
-        print(plain_file_name)
+        print("File request for:", plain_file_name)
 
         with open(plain_file_name.decode("utf-8"), 'rb') as f:
             for piece in read_in_chunks(f):
@@ -120,10 +120,10 @@ class ConnectionHandler:
                 if msg_type:
                     msg_type = msg_type.upper()
                 if msg_type not in self.handlers:
-                    self.__debug('Not handled: %s: %s' % (msg_type, msg_data))
+                    self.__debug('Peer msg not handled') # : %s: %s' % (msg_type, msg_data))
                     break
                 else:
-                    self.__debug('Handling peer msg: %s: %s' % (msg_type, msg_data))
+                    self.__debug('Handling peer msg') # : %s: %s' % (msg_type, msg_data))
                     disconnect = self.handlers[msg_type](conn, msg_data)
                     if disconnect:
                         break
@@ -172,9 +172,10 @@ class ConnectionHandler:
             debug('Sent %s' % Peer.SEND_CERT)
 
             msg_reply = conn.recv_data()
-            debug('Got reply %s' % (str(msg_reply)))
+            # debug('Got reply %s' % (str(msg_reply)))
+            debug("Received certificate")
             if msg_reply[0] != Peer.CERT_RESPONSE_VALID:
-                print('ERROR')
+                debug("Certificate validation error.")
                 return
             if conn.add_peer_cert(msg_reply[1].decode("utf-8")):
                 public_key = conn.peer_cert.public_key()
@@ -197,6 +198,7 @@ class ConnectionHandler:
             received_file_name = 'received_'+file_name[_substr_index:]
             try:
                 os.remove(received_file_name)
+                print('Removed existing file:', received_file_name)
             except OSError:
                 pass
 
@@ -217,6 +219,7 @@ class ConnectionHandler:
                 with open(received_file_name, 'ab') as f:
                     f.write(plain_data)
                 
+            debug(f"File received written to: {received_file_name}")
             conn.close()
         except KeyboardInterrupt:
             raise

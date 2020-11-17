@@ -122,9 +122,9 @@ def update_ALLOWED():
     print("Before starting authserver, you can add new users here...")
     while 1:
         try:
-            request = str(input("Enter <anthing else> to stop adding users and start auth server, enter 'new' to create a new user: "))
+            request = str(input("Add new user? (t/f) "))
 
-            if request == 'new':
+            if request == 't':
                 _alias = str(input("Enter Alias: "))
                 _password = str(input("Enter Password: "))
                 ALLOWED[_alias] = _password
