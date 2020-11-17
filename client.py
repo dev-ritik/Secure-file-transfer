@@ -200,7 +200,7 @@ class ConnectionHandler:
 
     def file_request_handler(self, conn, msg):
         print("Received", msg)
-        conn.send_data(Peer.RESPONSE_FILE, "Nothing much!")
+        conn.send_data(Peer.RESPONSE_FILE, "I like this!")
 
     @staticmethod
     def make_server_socket(port, backlog=5):
@@ -325,5 +325,5 @@ if __name__ == '__main__':
     t = threading.Thread(target=server_conn.socket_listener, args=[]).start()
 
     if int(sys.argv[2]) == 12666:
-        print(server_conn.connect_and_request(server_host, sys.argv[2], Peer.REQUEST_FILE, "Hi! wanna hangout?!",
+        print(server_conn.connect_and_request(server_host, sys.argv[2], Peer.REQUEST_FILE, "Life is this",
                                               waitreply=True))
