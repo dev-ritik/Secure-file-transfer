@@ -101,12 +101,15 @@ class GetHandler(BaseHTTPRequestHandler):
             if not data.get('name') or not data.get('password') or not data.get('public_key'):
                 self.send_error(400, "Bad Request {}".format(self.path))
                 return
-            self.send_response(200)
-            self.send_header('Content-Type',
-                             'text/plain; charset=utf-8')
-            self.end_headers()
-            self.wfile.write(
-                Encrypt().get_signed_key(data['name'], data['password'], data['public_key']).encode('utf-8'))
+            cert = Encrypt().get_signed_key(data['name'], data['password'], data['public_key'])
+            if cert == "":
+                self.send_error(401, "Unauthorized {}".format(self.path))
+            else:
+                self.send_response(200)
+                self.send_header('Content-Type',
+                                 'text/plain; charset=utf-8')
+                self.end_headers()
+                self.wfile.write(cert.encode('utf-8'))
         else:
             self.send_error(404, "Path not found {}".format(self.path))
 

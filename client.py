@@ -3,6 +3,7 @@ import os
 import sys
 import threading
 import traceback
+from time import sleep
 
 import requests
 from cryptography.hazmat.primitives import serialization
@@ -38,13 +39,16 @@ class LoginHandler:
             traceback.print_exc()
             print("Auth Server Connection Error")
             return ""
-        print('Certificate Signed')
+
+        if resp.status_code != 200:
+            print("Unauthorized")
+            return ""
         return resp.text.strip()
 
 
 if __name__ == '__main__':
-    name = sys.argv[1]
-    password = sys.argv[2]
+    name = input("Please enter your corp alias: ").strip()
+    password = input("Please enter your password: ").strip()
 
     my_keys_dir = f'keys/client/{name}'
     if not os.path.exists(my_keys_dir):
@@ -55,16 +59,22 @@ if __name__ == '__main__':
         encrypt.get_my_pub_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.PKCS1), "utf-8")
     # print(my_pub_key)
     signed_cert = LoginHandler(my_pub_key, name, password).attempt_login()
-    # print(signed_cert)
+    if signed_cert == "":
+        exit(1)
+
     encrypt.add_signed_cert(signed_cert=signed_cert)
 
-    server_port = sys.argv[3]
+    server_port = int(input("Enter port to listen on: "))
     server_host = 'localhost'
     server_conn = ConnectionHandler(server_port, encrypt)
 
-    t = threading.Thread(target=server_conn.socket_listener, args=[]).start()
+    request = bool(input("Do you like to request a file? t/f? ") == 't')
 
-    if int(sys.argv[4]) == 12666:
-        # print(server_conn.connect_and_request(server_host, sys.argv[4], Peer.REQUEST_FILE, "Life is this",
-        #                                       wait_reply=True))
-        server_conn.request_encrypted_file(server_host, sys.argv[4], sys.argv[5])
+    print(f"Listening for incoming connections on port {server_host}:{server_port}")
+    t = threading.Thread(target=server_conn.socket_listener, args=[]).start()
+    sleep(1)
+    if request:
+        peer_port = int(input("Enter peer's port: "))
+        file_name = input("Enter the file name: ")
+        print(f"Requesting for file {file_name} on {server_host}:{peer_port}")
+        server_conn.request_encrypted_file(server_host, peer_port, file_name)
