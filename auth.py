@@ -34,8 +34,8 @@ class Encrypt:
         return True if ALLOWED.get(name) and ALLOWED[name] == password else False
 
     def generate_self_signed_cert(self):
-        # Use
-        # openssl req -x509 -new -extensions v3_ca -nodes -key keys/auth/rootCA.key -sha256 -days 1024 -out keys/auth/rootCA.crt
+        # Use openssl req -x509 -new -extensions v3_ca -nodes -key keys/auth/rootCA.key -sha256 -days 1024 -out
+        # keys/auth/rootCA.crt
         # openssl verify --CAfile keys/auth/rootCA.crt keys/client/harvey/signed_cert.crt
 
         subject = issuer = x509.Name([
@@ -93,7 +93,6 @@ class GetHandler(BaseHTTPRequestHandler):
         if parsed_path.path == '/verify':
             data = self.rfile.read(int(self.headers['Content-Length']))
             data = json.loads(data.decode("utf-8"))
-            # print(data)
             if not data.get('name') or not data.get('password') or not data.get('public_key'):
                 self.send_error(400, "Bad Request {}".format(self.path))
                 return
