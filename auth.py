@@ -27,28 +27,52 @@ class Encrypt:
     @staticmethod
     def is_registered(name, password) -> bool:
         ALLOWED = {
-            "ritik": "must_not_be_revealed"
+            "ritik": "must_not_be_revealed",
+            "harvey": "specter",
+            "mike": "ross"
         }
         return True if ALLOWED.get(name) and ALLOWED[name] == password else False
 
-    def sign_public_key(self, public_key):
-        # print(public_key)
-        to_sign_key = serialization.load_pem_public_key(public_key.encode('utf-8'), backend=default_backend())
-
+    def generate_self_signed_cert(self):
         subject = issuer = x509.Name([
             x509.NameAttribute(NameOID.COUNTRY_NAME, u"IN"),
             x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"Uttarakhand"),
             x509.NameAttribute(NameOID.LOCALITY_NAME, u"Roorkee"),
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"IIT Roorkee"),
-            x509.NameAttribute(NameOID.COMMON_NAME, u"Node 1"),
+            x509.NameAttribute(NameOID.COMMON_NAME, u"MDG"),
+        ])
+        cert = x509.CertificateBuilder().subject_name(
+            subject).issuer_name(
+            issuer).public_key(
+            self.get_my_private_key().public_key()).serial_number(
+            x509.random_serial_number()
+        ).not_valid_before(
+            datetime.utcnow()).not_valid_after(
+            datetime.utcnow() + timedelta(days=10)
+        ).sign(self.get_my_private_key(), hashes.SHA256())
+
+        with open("keys/auth/rootCA.crt", "wb") as f:
+            f.write(cert.public_bytes(serialization.Encoding.PEM))
+
+    def sign_public_key(self, public_key):
+        # print(public_key)
+        to_sign_key = serialization.load_pem_public_key(public_key.encode('utf-8'), backend=default_backend())
+
+        with open('keys/auth/rootCA.crt', "rb") as f:
+            root_crt = x509.load_pem_x509_certificate(f.read(), default_backend())
+        issuer = root_crt.issuer
+        subject = x509.Name([
+            x509.NameAttribute(NameOID.COUNTRY_NAME, u"US"),
+            x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"USA"),
+            x509.NameAttribute(NameOID.LOCALITY_NAME, u"New York"),
+            x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"SLWW"),
+            x509.NameAttribute(NameOID.COMMON_NAME, u"Harvey"),
         ])
         cert = x509.CertificateBuilder().subject_name(
             subject).issuer_name(issuer).public_key(
             to_sign_key).serial_number(x509.random_serial_number()).not_valid_before(
             datetime.utcnow()).not_valid_after(
-            datetime.utcnow() + timedelta(days=10)).add_extension(
-            x509.SubjectAlternativeName([x509.DNSName(u"localhost")]),
-            critical=False, ).sign(self.get_my_private_key(), hashes.SHA256())
+            datetime.utcnow() + timedelta(days=10)).sign(self.get_my_private_key(), hashes.SHA256())
 
         return str(cert.public_bytes(serialization.Encoding.PEM), "utf-8")
 
@@ -82,5 +106,6 @@ class GetHandler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     from http.server import HTTPServer
 
+    Encrypt().generate_self_signed_cert()
     server = HTTPServer((HOST, PORT), GetHandler)
     server.serve_forever()
