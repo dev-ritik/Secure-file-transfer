@@ -9,6 +9,7 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.serialization.base import load_pem_private_key
 from cryptography.x509.oid import NameOID
+from idna import unicode
 
 HOST = 'localhost'
 PORT = 12565
@@ -62,7 +63,7 @@ class Encrypt:
         with open("keys/auth/rootCA.crt", "wb") as f:
             f.write(cert.public_bytes(serialization.Encoding.PEM))
 
-    def sign_public_key(self, public_key):
+    def sign_public_key(self, name, public_key):
         # print(public_key)
         to_sign_key = serialization.load_pem_public_key(public_key.encode('utf-8'), backend=default_backend())
 
@@ -74,7 +75,7 @@ class Encrypt:
             x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"USA"),
             x509.NameAttribute(NameOID.LOCALITY_NAME, u"New York"),
             x509.NameAttribute(NameOID.ORGANIZATION_NAME, u"SLWW"),
-            x509.NameAttribute(NameOID.COMMON_NAME, u"Harvey"),
+            x509.NameAttribute(NameOID.COMMON_NAME, name)
         ])
         cert = x509.CertificateBuilder().subject_name(
             subject).issuer_name(issuer).public_key(
@@ -87,7 +88,7 @@ class Encrypt:
     def get_signed_key(self, name, password, public_key) -> str:
         if not Encrypt.is_registered(name, password):
             return ""
-        return self.sign_public_key(public_key)
+        return self.sign_public_key(name, public_key)
 
 
 class GetHandler(BaseHTTPRequestHandler):
