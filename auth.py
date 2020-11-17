@@ -15,6 +15,10 @@ PORT = 12565
 
 
 class Encrypt:
+    """
+    Handle client keys and certificates. Encrypts and decrypts data.
+    """
+
     def __init__(self):
         self.MY_PRIVATE_KEY = None
 

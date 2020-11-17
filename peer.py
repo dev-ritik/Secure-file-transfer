@@ -10,6 +10,9 @@ from utils import debug
 
 
 class Peer:
+    """
+    Represents the state of a connected peer and has utility functions
+    """
     REQUEST_FILE = 'RQFL'
     RESPONSE_FILE = 'RSFL'
     SEND_CERT = 'SECE'

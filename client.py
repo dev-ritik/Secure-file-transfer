@@ -12,6 +12,10 @@ from encrypt import Encrypt
 
 
 class LoginHandler:
+    """
+    Handle client login with corporate's auth server.
+    Login ensures authentication and signs public key for establishing identity.
+    """
     AUTH_SERVER_URL = 'http://localhost:12565'
 
     def __init__(self, pub_key: str, name="ritik", password="must_not_be_revealed"):

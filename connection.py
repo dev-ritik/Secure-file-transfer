@@ -10,6 +10,10 @@ from utils import debug
 
 
 class ConnectionHandler:
+    """
+    Handle Client's main socket for incoming requests
+    Has procedures for actions and handlers for incoming requests
+    """
     def __init__(self, server_port, server_host='localhost', max_peers=5):
         self.max_peers = int(max_peers)
         self.server_port = int(server_port)

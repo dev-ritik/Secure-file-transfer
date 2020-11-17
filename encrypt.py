@@ -9,6 +9,9 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 
 class Encrypt:
+    """
+    Handle client keys and certificates. Encrypts and decrypts data.
+    """
     PASSPHRASE = "harvey_specter"
 
     def __init__(self, key_dir):
