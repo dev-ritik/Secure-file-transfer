@@ -49,6 +49,13 @@ class Encrypt:
         with open(self.key_dir + "/signed_cert.crt", "wb") as f:
             f.write(signed_cert.encode('utf-8'))
 
+    def get_signed_cert(self):
+        with open(self.key_dir + '/signed_cert.crt', "rb") as f:
+            return x509.load_pem_x509_certificate(f.read(), default_backend())
+
+    def get_signed_cert_str(self):
+        return str(self.get_signed_cert().public_bytes(serialization.Encoding.PEM), "utf-8")
+
     @staticmethod
     def create_private_key(filename: str):
         key = rsa.generate_private_key(

@@ -60,11 +60,11 @@ if __name__ == '__main__':
 
     server_port = sys.argv[3]
     server_host = 'localhost'
-    server_conn = ConnectionHandler(server_port)
+    server_conn = ConnectionHandler(server_port, encrypt)
 
     t = threading.Thread(target=server_conn.socket_listener, args=[]).start()
 
     if int(sys.argv[4]) == 12666:
         # print(server_conn.connect_and_request(server_host, sys.argv[4], Peer.REQUEST_FILE, "Life is this",
         #                                       wait_reply=True))
-        server_conn.request_encrypted_file(server_host, sys.argv[4], signed_cert, encrypt.get_private_key())
+        server_conn.request_encrypted_file(server_host, sys.argv[4])

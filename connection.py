@@ -5,6 +5,7 @@ import traceback
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
+from encrypt import Encrypt
 from peer import Peer
 from utils import debug
 
@@ -14,10 +15,12 @@ class ConnectionHandler:
     Handle Client's main socket for incoming requests
     Has procedures for actions and handlers for incoming requests
     """
-    def __init__(self, server_port, server_host='localhost', max_peers=5):
+
+    def __init__(self, server_port, encrypt: Encrypt, server_host='localhost', max_peers=5):
         self.max_peers = int(max_peers)
         self.server_port = int(server_port)
         self.server_host = server_host
+        self.encrypt = encrypt
 
         # self.peer_lock = threading.Lock()  # ensure proper access to
         # peers list (maybe better to use
@@ -28,6 +31,14 @@ class ConnectionHandler:
 
     def file_request_handler(self, conn: Peer, msg) -> bool:
         print("Received", msg)
+
+        plaintext = self.encrypt.get_private_key().decrypt(
+            msg,
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None))
+        print(plaintext)
         message = b"I like this!"
         if conn.peer_cert:
             public_key = conn.peer_cert.public_key()
@@ -45,7 +56,7 @@ class ConnectionHandler:
 
     def record_cert_handler(self, conn: Peer, msg) -> bool:
         if conn.add_peer_cert(msg.decode("utf-8")):
-            conn.send_data(Peer.CERT_RESPONSE_VALID, "")
+            conn.send_data(Peer.CERT_RESPONSE_VALID, self.encrypt.get_signed_cert_str())
             return False
         else:
             conn.send_data(Peer.CERT_RESPONSE_INVALID, "")
@@ -150,10 +161,10 @@ class ConnectionHandler:
     #
     #     return msg_reply
 
-    def request_encrypted_file(self, host, port, my_cert: str, my_private_key):
+    def request_encrypted_file(self, host, port):
         try:
             conn = Peer(port)
-            conn.send_data(Peer.SEND_CERT, my_cert)
+            conn.send_data(Peer.SEND_CERT, self.encrypt.get_signed_cert_str())
             debug('Sent %s' % Peer.SEND_CERT)
 
             msg_reply = conn.recv_data()
@@ -161,12 +172,21 @@ class ConnectionHandler:
             if msg_reply[0] != Peer.CERT_RESPONSE_VALID:
                 print('ERROR')
                 return
-
-            conn.send_data(Peer.REQUEST_FILE, "I'm Donna.")
+            if conn.add_peer_cert(msg_reply[1].decode("utf-8")):
+                public_key = conn.peer_cert.public_key()
+                ciphertext = public_key.encrypt(
+                    b"I'm Donna.",
+                    padding.OAEP(
+                        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                        algorithm=hashes.SHA256(),
+                        label=None))
+                conn.send_data(Peer.REQUEST_FILE, ciphertext)
+            else:
+                print("ERROR")
             debug('Sent %s' % Peer.REQUEST_FILE)
             msg_reply = conn.recv_data()
             debug('Got reply %s' % (str(msg_reply)))
-            plaintext = my_private_key.decrypt(
+            plaintext = self.encrypt.get_private_key().decrypt(
                 msg_reply[1],
                 padding.OAEP(
                     mgf=padding.MGF1(algorithm=hashes.SHA256()),
