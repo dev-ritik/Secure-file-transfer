@@ -3,6 +3,7 @@ import json
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler
 from urllib import parse
+from time import sleep
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
@@ -11,8 +12,16 @@ from cryptography.hazmat.primitives.serialization.base import load_pem_private_k
 from cryptography.x509.oid import NameOID
 from idna import unicode
 
+from threading import Thread
+
 HOST = 'localhost'
 PORT = 12565
+
+ALLOWED = {
+            "user_alias": "password_which_must_not_be_revealed",
+            "user1": "password1",
+            "user2": "password2"
+        }
 
 
 class Encrypt:
@@ -31,11 +40,7 @@ class Encrypt:
 
     @staticmethod
     def is_registered(name, password) -> bool:
-        ALLOWED = {
-            "ritik": "must_not_be_revealed",
-            "harvey": "specter",
-            "mike": "ross"
-        }
+        global ALLOWED
         return True if ALLOWED.get(name) and ALLOWED[name] == password else False
 
     def generate_self_signed_cert(self):
@@ -113,10 +118,30 @@ class GetHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404, "Path not found {}".format(self.path))
 
+def update_ALLOWED():
+    print("Before starting authserver, you can add new users here...")
+    while 1:
+        try:
+            request = str(input("Enter <anthing else> to stop adding users and start auth server, enter 'new' to create a new user: "))
+
+            if request == 'new':
+                _alias = str(input("Enter Alias: "))
+                _password = str(input("Enter Password: "))
+                ALLOWED[_alias] = _password
+                
+            else:
+                break
+        except Exception as e:
+            print("Unexpected Exception:", str(e))
+            break
 
 if __name__ == '__main__':
     from http.server import HTTPServer
 
+    update_ALLOWED()
+
     # Encrypt().generate_self_signed_cert()
     server = HTTPServer((HOST, PORT), GetHandler)
+
+    print("Auth server running.")
     server.serve_forever()

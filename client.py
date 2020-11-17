@@ -68,13 +68,25 @@ if __name__ == '__main__':
     server_host = 'localhost'
     server_conn = ConnectionHandler(server_port, encrypt)
 
-    request = bool(input("Do you like to request a file? t/f? ") == 't')
-
-    print(f"Listening for incoming connections on port {server_host}:{server_port}")
     t = threading.Thread(target=server_conn.socket_listener, args=[]).start()
+    print(f"Listening for incoming connections on port {server_host}:{server_port}")
     sleep(1)
-    if request:
-        peer_port = int(input("Enter peer's port: "))
-        file_name = input("Enter the file name: ")
-        print(f"Requesting for file {file_name} on {server_host}:{peer_port}")
-        server_conn.request_encrypted_file(server_host, peer_port, file_name)
+
+    while 1:
+        try:
+            request = bool(input("Do you like to request a file? t/f? ") == 't')
+
+            if request:
+                peer_port = int(input("Enter peer's port: "))
+                file_name = input("Enter the file name: ")
+                print(f"Requesting for file {file_name} on {server_host}:{peer_port}")
+                server_conn.request_encrypted_file(server_host, peer_port, file_name)
+            else:
+                print("Enter t when you want to request a file, the program will wait till then...")
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            print("Unexpected Exception:", str(e))
+            break
+    print("Exiting Program!")
+    exit(1)
