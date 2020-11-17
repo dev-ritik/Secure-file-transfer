@@ -41,7 +41,7 @@ class Encrypt:
         store = X509Store()
         store.add_cert(root_cert)
         store_ctx = X509StoreContext(store, peer_cert)
-        print(store_ctx.verify_certificate())
+        store_ctx.verify_certificate()
 
     def get_my_pub_key(self):
         if self.public_key:

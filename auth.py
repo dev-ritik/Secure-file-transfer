@@ -34,6 +34,10 @@ class Encrypt:
         return True if ALLOWED.get(name) and ALLOWED[name] == password else False
 
     def generate_self_signed_cert(self):
+        # Use
+        # openssl req -x509 -new -extensions v3_ca -nodes -key keys/auth/rootCA.key -sha256 -days 1024 -out keys/auth/rootCA.crt
+        # openssl verify --CAfile keys/auth/rootCA.crt keys/client/harvey/signed_cert.crt
+
         subject = issuer = x509.Name([
             x509.NameAttribute(NameOID.COUNTRY_NAME, u"IN"),
             x509.NameAttribute(NameOID.STATE_OR_PROVINCE_NAME, u"Uttarakhand"),
@@ -106,6 +110,6 @@ class GetHandler(BaseHTTPRequestHandler):
 if __name__ == '__main__':
     from http.server import HTTPServer
 
-    Encrypt().generate_self_signed_cert()
+    # Encrypt().generate_self_signed_cert()
     server = HTTPServer((HOST, PORT), GetHandler)
     server.serve_forever()
