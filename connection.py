@@ -1,13 +1,14 @@
 import socket
 import threading
 import traceback
+import os
 
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 
 from encrypt import Encrypt
 from peer import Peer
-from utils import debug
+from utils import debug, read_in_chunks
 
 
 class ConnectionHandler:
@@ -29,29 +30,32 @@ class ConnectionHandler:
 
         self.handlers = {Peer.REQUEST_FILE: self.file_request_handler, Peer.SEND_CERT: self.record_cert_handler}
 
-    def file_request_handler(self, conn: Peer, msg) -> bool:
-        print("Received", msg)
+    def file_request_handler(self, conn: Peer, file_name) -> bool:
+        # print("Received", file_name)
 
-        plaintext = self.encrypt.get_private_key().decrypt(
-            msg,
+        plain_file_name = self.encrypt.get_private_key().decrypt(
+            file_name,
             padding.OAEP(
                 mgf=padding.MGF1(algorithm=hashes.SHA256()),
                 algorithm=hashes.SHA256(),
                 label=None))
-        print(plaintext)
-        message = b"I like this!"
-        if conn.peer_cert:
-            public_key = conn.peer_cert.public_key()
-            ciphertext = public_key.encrypt(
-                message,
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                    algorithm=hashes.SHA256(),
-                    label=None))
-            # print(ciphertext)
-            conn.send_data(Peer.RESPONSE_FILE, ciphertext)
-        else:
-            conn.send_data(Peer.RESPONSE_FILE, "I like this!")
+        print(plain_file_name)
+
+        with open(plain_file_name.decode("utf-8"), 'rb') as f:
+            for piece in read_in_chunks(f):
+                message = piece
+                if conn.peer_cert:
+                    public_key = conn.peer_cert.public_key()
+                    ciphertext = public_key.encrypt(
+                        message,
+                        padding.OAEP(
+                            mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                            algorithm=hashes.SHA256(),
+                            label=None))
+                    # print(ciphertext)
+                    conn.send_data(Peer.RESPONSE_FILE, ciphertext)
+                else:
+                    print("ERROR: PEER CERTIFICATE NOT AVAILABLE.")
         return True
 
     def record_cert_handler(self, conn: Peer, msg) -> bool:
@@ -161,7 +165,7 @@ class ConnectionHandler:
     #
     #     return msg_reply
 
-    def request_encrypted_file(self, host, port):
+    def request_encrypted_file(self, host, port, file_name):
         try:
             conn = Peer(port)
             conn.send_data(Peer.SEND_CERT, self.encrypt.get_signed_cert_str())
@@ -175,7 +179,7 @@ class ConnectionHandler:
             if conn.add_peer_cert(msg_reply[1].decode("utf-8")):
                 public_key = conn.peer_cert.public_key()
                 ciphertext = public_key.encrypt(
-                    b"I'm Donna.",
+                    bytes(file_name, 'utf-8'),
                     padding.OAEP(
                         mgf=padding.MGF1(algorithm=hashes.SHA256()),
                         algorithm=hashes.SHA256(),
@@ -184,15 +188,35 @@ class ConnectionHandler:
             else:
                 print("ERROR")
             debug('Sent %s' % Peer.REQUEST_FILE)
-            msg_reply = conn.recv_data()
-            debug('Got reply %s' % (str(msg_reply)))
-            plaintext = self.encrypt.get_private_key().decrypt(
-                msg_reply[1],
-                padding.OAEP(
-                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
-                    algorithm=hashes.SHA256(),
-                    label=None))
-            print(plaintext)
+
+            try:
+                _substr_index = file_name.rindex('/')+1
+            except:
+                _substr_index = 0
+
+            received_file_name = 'received_'+file_name[_substr_index:]
+            try:
+                os.remove(received_file_name)
+            except OSError:
+                pass
+
+            while True:    
+                msg_reply = conn.recv_data()
+                # debug('Got reply %s' % (str(msg_reply)))
+
+                if msg_reply == (None, None):
+                    break
+
+                plain_data = self.encrypt.get_private_key().decrypt(
+                    msg_reply[1],
+                    padding.OAEP(
+                        mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                        algorithm=hashes.SHA256(),
+                        label=None))
+
+                with open(received_file_name, 'ab') as f:
+                    f.write(plain_data)
+                
             conn.close()
         except KeyboardInterrupt:
             raise

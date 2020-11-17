@@ -2,3 +2,7 @@ venv/
 *.pyo
 *.pyc
 .idea
+*.png
+*.mp4
+keys/client/*
+.vscode/*

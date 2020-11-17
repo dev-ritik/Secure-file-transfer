@@ -67,4 +67,4 @@ if __name__ == '__main__':
     if int(sys.argv[4]) == 12666:
         # print(server_conn.connect_and_request(server_host, sys.argv[4], Peer.REQUEST_FILE, "Life is this",
         #                                       wait_reply=True))
-        server_conn.request_encrypted_file(server_host, sys.argv[4])
+        server_conn.request_encrypted_file(server_host, sys.argv[4], sys.argv[5])
