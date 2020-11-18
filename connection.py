@@ -199,6 +199,8 @@ class ConnectionHandler:
             try:
                 os.remove(received_file_name)
                 print('Removed existing file:', received_file_name)
+
+                os.remove('tmp_recv_encrfile')
             except OSError:
                 pass
 
@@ -218,6 +220,8 @@ class ConnectionHandler:
 
                 with open(received_file_name, 'ab') as f:
                     f.write(plain_data)
+                with open('tmp_recv_encrfile', 'ab') as f:
+                    f.write(msg_reply[1])
                 
             debug(f"File received written to: {received_file_name}")
             conn.close()
