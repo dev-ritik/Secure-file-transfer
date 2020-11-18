@@ -1,12 +1,13 @@
+import base64
 import json
 import os
-import sys
 import threading
 import traceback
 from time import sleep
 
 import requests
-from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
 
 from connection import ConnectionHandler
 from encrypt import Encrypt
@@ -19,7 +20,7 @@ class LoginHandler:
     """
     AUTH_SERVER_URL = 'http://localhost:12565'
 
-    def __init__(self, pub_key: str, name="ritik", password="must_not_be_revealed"):
+    def __init__(self, name: str, password: str, pub_key: str):
         self.name = name
         self.password = password
         self.pub_key = pub_key
@@ -31,11 +32,20 @@ class LoginHandler:
         payload = {
             "name": self.name,
             "password": self.password,
+        }
+        ciphertext = Encrypt.get_root_pub_key().encrypt(
+            json.dumps(payload).encode('utf-8'),
+            padding.OAEP(
+                mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                algorithm=hashes.SHA256(),
+                label=None))
+        data = {
+            "payload": base64.b64encode(ciphertext).decode('utf-8'),
             "public_key": self.pub_key,
         }
         try:
-            resp = requests.post(LoginHandler.AUTH_SERVER_URL + '/verify', data=json.dumps(payload))
-        except Exception as e:  # This is the correct syntax
+            resp = requests.post(LoginHandler.AUTH_SERVER_URL + '/verify', data=json.dumps(data))
+        except Exception:  # This is the correct syntax
             traceback.print_exc()
             print("Auth Server Connection Error")
             return ""
@@ -57,8 +67,8 @@ if __name__ == '__main__':
     encrypt = Encrypt(my_keys_dir)
     my_pub_key = str(
         encrypt.get_my_pub_key().public_bytes(serialization.Encoding.PEM, serialization.PublicFormat.PKCS1), "utf-8")
-    # print(my_pub_key)
-    signed_cert = LoginHandler(my_pub_key, name, password).attempt_login()
+
+    signed_cert = LoginHandler(name, password, my_pub_key).attempt_login()
     if signed_cert == "":
         exit(1)
 

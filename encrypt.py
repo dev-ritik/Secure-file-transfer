@@ -20,16 +20,8 @@ class Encrypt:
         self.public_key = None
 
     @staticmethod
-    def get_root_cert(filepath):
-        if os.path.isfile(filepath) and os.access(filepath, os.R_OK):
-            with open(filepath, "rb") as f:
-                return x509.load_pem_x509_certificate(f.read(), default_backend())
-        else:
-            return None
-
-    @staticmethod
     def verify_key_chain(peer_cert):
-        root_cert = Encrypt.get_root_cert('keys/auth/rootCA.crt')
+        root_cert = Encrypt.get_root_cert()
         root_cert = crypto.X509.from_cryptography(root_cert)
         peer_cert = crypto.X509.from_cryptography(peer_cert)
 
@@ -80,3 +72,12 @@ class Encrypt:
         else:
             self.private_key = self.create_private_key(private_key_path)
         return self.private_key
+
+    @staticmethod
+    def get_root_cert():
+        with open('keys/auth/rootCA.crt', "rb") as f:
+            return x509.load_pem_x509_certificate(f.read(), default_backend())
+
+    @staticmethod
+    def get_root_pub_key():
+        return Encrypt.get_root_cert().public_key()

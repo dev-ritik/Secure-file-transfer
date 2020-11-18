@@ -1,27 +1,25 @@
 #!/usr/bin/python3
+import base64
 import json
 from datetime import datetime, timedelta
 from http.server import BaseHTTPRequestHandler
 from urllib import parse
-from time import sleep
 
 from cryptography import x509
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.serialization.base import load_pem_private_key
 from cryptography.x509.oid import NameOID
-from idna import unicode
-
-from threading import Thread
 
 HOST = 'localhost'
 PORT = 12565
 
 ALLOWED = {
-            "user_alias": "password_which_must_not_be_revealed",
-            "user1": "password1",
-            "user2": "password2"
-        }
+    "user_alias": "password_which_must_not_be_revealed",
+    "user1": "password1",
+    "user2": "password2"
+}
 
 
 class Encrypt:
@@ -103,10 +101,18 @@ class GetHandler(BaseHTTPRequestHandler):
         if parsed_path.path == '/verify':
             data = self.rfile.read(int(self.headers['Content-Length']))
             data = json.loads(data.decode("utf-8"))
-            if not data.get('name') or not data.get('password') or not data.get('public_key'):
+            plain_data = Encrypt().get_my_private_key().decrypt(
+                base64.b64decode(data["payload"].encode('utf-8')),
+                padding.OAEP(
+                    mgf=padding.MGF1(algorithm=hashes.SHA256()),
+                    algorithm=hashes.SHA256(),
+                    label=None))
+            user_details = json.loads(plain_data.decode('utf8'))
+
+            if not user_details.get('name') or not user_details.get('password') or not data.get('public_key'):
                 self.send_error(400, "Bad Request {}".format(self.path))
                 return
-            cert = Encrypt().get_signed_key(data['name'], data['password'], data['public_key'])
+            cert = Encrypt().get_signed_key(user_details['name'], user_details['password'], data['public_key'])
             if cert == "":
                 self.send_error(401, "Unauthorized {}".format(self.path))
             else:
@@ -118,6 +124,7 @@ class GetHandler(BaseHTTPRequestHandler):
         else:
             self.send_error(404, "Path not found {}".format(self.path))
 
+
 def update_ALLOWED():
     print("Before starting authserver, you can add new users here...")
     while 1:
@@ -128,12 +135,12 @@ def update_ALLOWED():
                 _alias = str(input("Enter Alias: "))
                 _password = str(input("Enter Password: "))
                 ALLOWED[_alias] = _password
-                
             else:
                 break
         except Exception as e:
             print("Unexpected Exception:", str(e))
             break
+
 
 if __name__ == '__main__':
     from http.server import HTTPServer

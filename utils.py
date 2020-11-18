@@ -7,6 +7,7 @@ def debug(msg):
 
     print("[%s] %s" % (str(threading.currentThread().getName()), msg))
 
+
 def read_in_chunks(file_object, chunk_size=100):
     """Lazy function (generator) to read a file piece by piece.
     """
@@ -14,4 +15,4 @@ def read_in_chunks(file_object, chunk_size=100):
         data = file_object.read(chunk_size)
         if not data:
             break
-        yield (data)
+        yield data

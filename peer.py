@@ -32,7 +32,6 @@ class Peer:
     def add_peer_cert(self, cert: str) -> bool:
         try:
             self.peer_cert = load_pem_x509_certificate(str.encode(cert), default_backend())
-            print(self.peer_cert)
             Encrypt.verify_key_chain(self.peer_cert)
             return True
         except:
